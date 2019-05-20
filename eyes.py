@@ -78,7 +78,8 @@ if adc:
 
 # Load SVG file, extract paths & convert to point lists --------------------
 
-dom               = parse("graphics/cyclops-eye.svg")
+#dom               = parse("graphics/cyclops-eye.svg")
+dom               = parse("graphics/eye.svg")
 vb                = getViewBox(dom)
 pupilMinPts       = getPoints(dom, "pupilMin"      , 32, True , True )
 pupilMaxPts       = getPoints(dom, "pupilMax"      , 32, True , True )
@@ -622,7 +623,7 @@ def frame(p):
 	leftEye.rotateToY(curX + convergence)
 	leftEye.draw()
 
-	leftUpperEyelid.draw()
+	#leftUpperEyelid.draw()
 	leftLowerEyelid.draw()
 	rightUpperEyelid.draw()
 	rightLowerEyelid.draw()
@@ -678,4 +679,17 @@ while True:
 	else: # Fractal auto pupil scale
 		v = random.random()
 		split(currentPupilScale, v, 4.0, 1.0)
-	currentPupilScale = v
+		#v = 0.1
+		#currentPupilScale = v
+		#startTime = time.time()
+		#if PUPIL_SMOOTH > 0:
+			#vv = ((currentPupilScale * (PUPIL_SMOOTH - 1) + v) /
+				#PUPIL_SMOOTH)						
+		#while True:
+			#dt = time.time() - startTime
+			#print(dt)
+			#if dt >= 2.0: break
+			#frame(vv)
+				
+			
+	

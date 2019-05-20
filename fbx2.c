@@ -204,7 +204,7 @@ static const struct {
 	const uint8_t *init;    // Pointer to initialization command list
 	const uint8_t *win;     // Pointer to window command list
 } screen[] = {
-  { 128, 128, 10000000, initOLED, winOLED },
+  { 128, 128, 4500000, initOLED, winOLED }, //CHANGE TO 4.5MHz
   { 128, 128, 12000000, initTFT , winTFT  },
   { 240, 240, 96000000, initIPS , winIPS  } };
 
@@ -326,36 +326,40 @@ static int err(int code, char *string) {
 // INIT AND MAIN LOOP ------------------------------------------------------
 
 int main(int argc, char *argv[]) {
-
+        
 	uint8_t showFPS   = 0;
 	int     bitrate   = 0, // If 0, use default
 	        winFrames = 1, // How often to reset pixel window
 	        i, j, fd;
-
-	while((i = getopt(argc, argv, "otib:w:s")) != -1) {
-		switch(i) {
-		   case 'o': // Select OLED screen type
-			screenType = SCREEN_OLED;
-			break;
-		   case 't': // Select TFT screen type
-			screenType = SCREEN_TFT_GREEN;
-			break;
-		   case 'i': // Select IPS screen type
-			screenType = SCREEN_IPS;
-			break;
-		   case 'b': // SPI bitrate
-			bitrate = strtol(optarg, NULL, 0);
-			break;
-		   case 'w': // Number of frames between window sync
-			winFrames = strtol(optarg, NULL, 0);
-			break;
-		   case 's': // Show FPS
-			showFPS = 1;
-			break;
-		}
-	}
-
-	if(!bitrate) bitrate = screen[screenType].bitrate;
+	//fix parameters to OLED
+        screenType = SCREEN_OLED;
+	if(!bitrate) bitrate = screen[screenType].bitrate; //4.5MHz
+	(void)puts("OLED dit salut!");
+	
+	//while((i = getopt(argc, argv, "otib:w:s")) != -1) {
+		//switch(i) {
+		   //case 'o': // Select OLED screen type
+			//screenType = SCREEN_OLED;
+			//break;
+		   //case 't': // Select TFT screen type
+			//screenType = SCREEN_TFT_GREEN;
+			//break;
+		   //case 'i': // Select IPS screen type
+			//screenType = SCREEN_IPS;
+			//break;
+		   //case 'b': // SPI bitrate
+			//bitrate = strtol(optarg, NULL, 0);
+			//break;
+		   //case 'w': // Number of frames between window sync
+			//winFrames = strtol(optarg, NULL, 0);
+			//break;
+		   //case 's': // Show FPS
+			//showFPS = 1;
+			//break;
+		//}
+	//}
+        
+	
 
 	// Get SPI buffer size from sysfs.  Default is 4K.
 	FILE *fp;
@@ -449,16 +453,21 @@ int main(int argc, char *argv[]) {
 
 	int width  = (info.width  + 1) / 2, // Resource dimensions
 	    height = (info.height + 1) / 2;
-
+	
 	// Also determine positions of upper-left corners for the two
 	// SPI screens, and corresponding offsets into pixelBuf[].
 	// Rendering application will need to observe similar size and
 	// position constraints to produce desired results.
+	
+	// Here, changes offset point on top : eyes 4 times smaller
+	//int x, y,
+	//    offset0 = width * ((height - screen[screenType].height) / 2) +
+	//            (width / 2 - screen[screenType].width) / 2,
+	//    offset1 = offset0 + width / 2;
 	int x, y,
-	    offset0 = width * ((height - screen[screenType].height) / 2) +
-	             (width / 2 - screen[screenType].width) / 2,
-	    offset1 = offset0 + width / 2;
-
+	    offset0 = 0,
+	    offset1 = (width / 2) /4;
+	
 	// screen_resource is an intermediary between framebuffer and
 	// main RAM -- VideoCore will copy the primary framebuffer
 	// contents to this resource while providing interpolated
