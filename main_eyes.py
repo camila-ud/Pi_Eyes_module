@@ -1,8 +1,7 @@
 #!/usr/bin/python
-
-# This is a hasty port of the Teensy eyes code to Python...all kludgey with
-# an embarrassing number of globals in the frame() function and stuff.
-# Needed to get SOMETHING working, can focus on improvements next.
+# coding: utf8
+# Eyes Module
+# P20 C.Arias
 
 import Adafruit_ADS1x15
 import argparse
@@ -16,7 +15,8 @@ from svg.path import Path, parse_path
 from xml.dom.minidom import parse
 from gfxutil import *
 
-#subprocess
+#---------- : controller OLED
+import controller
 # Load SVG file, extract paths & convert to point lists --------------------
 
 #dom               = parse("graphics/cyclops-eye.svg")
@@ -130,10 +130,10 @@ reAxis(rightEye, 0.5) # Image map offset = 180 degree rotation
 
 
 # Init global stuff --------------------------------------------------------
-
-mykeys = pi3d.Keyboard() # For capturing key presses
 #---------------------init process to OLED
-OLED_PROCESS = 0
+controller.open_OLED()
+#-----------------------------------------
+mykeys = pi3d.Keyboard() # For capturing key presses
 startX       = random.uniform(-30.0, 30.0)
 n            = math.sqrt(900.0 - startX * startX)
 startY       = random.uniform(-n, n)
@@ -267,6 +267,9 @@ while DISPLAY.loop_running():
 		if k==27:
 			mykeys.close()
 			DISPLAY.stop()
+			#---------------------close process to OLED
+			controller.close_OLED()
+			#-----------------------------------------
 			exit(0)
 		elif k == 97:
 			if curX < 30: 
