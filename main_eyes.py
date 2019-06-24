@@ -3,14 +3,14 @@
 # Eyes Module
 # P20 C.Arias
 
-import Adafruit_ADS1x15
+#--import Adafruit_ADS1x15  =========================
 import argparse
 import math
 import pi3d
 import random
-import thread
+#--import thread=======================
 import time
-import RPi.GPIO as GPIO
+#--import RPi.GPIO as GPIO ==================
 from svg.path import Path, parse_path
 from xml.dom.minidom import parse
 from gfxutil import *
@@ -36,7 +36,7 @@ lowerLidEdgePts   = getPoints(dom, "lowerLidEdge"  , 33, False, False)
 
 # Set up display and initialize pi3d ---------------------------------------
 # Here ! dimensions change
-DISPLAY = pi3d.Display.create(w=512,h=256,samples=4)
+DISPLAY = pi3d.Display.create(w=512,h=256,samples=4) #Dimensions 128x4,128x2
 DISPLAY.set_background(0, 0, 0, 1) # r,g,b,alpha
 
 # eyeRadius is the size, in pixels, at which the whole eye will be rendered
@@ -78,6 +78,16 @@ scalePoints(upperLidEdgePts  , vb, eyeRadius)
 scalePoints(lowerLidClosedPts, vb, eyeRadius)
 scalePoints(lowerLidOpenPts  , vb, eyeRadius)
 scalePoints(lowerLidEdgePts  , vb, eyeRadius)
+# Determine change in pupil size to trigger iris geometry regen
+irisRegenThreshold = 0.0
+a = pointsBounds(pupilMinPts) # Bounds of pupil at min size (in pixels)
+b = pointsBounds(pupilMaxPts) # " at max size
+maxDist = max(abs(a[0] - b[0]), abs(a[1] - b[1]), # Determine distance of max
+              abs(a[2] - b[2]), abs(a[3] - b[3])) # variance around each edge
+# maxDist is motion range in pixels as pupil scales between 0.0 and 1.0.
+# 1.0 / maxDist is one pixel's worth of scale range.  Need 1/4 that...
+if maxDist > 0: irisRegenThreshold = 0.25 / maxDist
+
 
 # Generate initial iris meshes; vertex elements will get replaced on
 # a per-frame basis in the main loop, this just sets up textures, etc.
@@ -108,6 +118,7 @@ rightLowerEyelid.set_textures([lidMap])
 rightLowerEyelid.set_shader(shader)
 
 # Generate scleras for each eye...start with a 2D shape for lathing...
+
 angle1 = zangle(scleraFrontPts, eyeRadius)[1] # Sclera front angle
 angle2 = zangle(scleraBackPts , eyeRadius)[1] # " back angle
 aRange = 180 - angle1 - angle2
@@ -131,7 +142,7 @@ reAxis(rightEye, 0.5) # Image map offset = 180 degree rotation
 
 # Init global stuff --------------------------------------------------------
 #---------------------init process to OLED
-controller.open_OLED()
+#controller.open_OLED() ===============
 #-----------------------------------------
 mykeys = pi3d.Keyboard() # For capturing key presses
 startX       = random.uniform(-30.0, 30.0)
@@ -203,6 +214,29 @@ blinkStartTimeRight = 0
 
 trackingPos = 0.3
 trackingPosR = 0.3
+
+
+# Determine change in eyelid values needed to trigger geometry regen.
+# This is done a little differently than the pupils...instead of bounds,
+# the distance between the middle points of the open and closed eyelid
+# paths is evaluated, then similar 1/4 pixel threshold is determined.
+upperLidRegenThreshold = 0.0
+lowerLidRegenThreshold = 0.0
+p1 = upperLidOpenPts[len(upperLidOpenPts) / 2]
+p2 = upperLidClosedPts[len(upperLidClosedPts) / 2]
+dx = p2[0] - p1[0]
+dy = p2[1] - p1[1]
+d  = dx * dx + dy * dy
+if d > 0: upperLidRegenThreshold = 0.25 / math.sqrt(d)
+p1 = lowerLidOpenPts[len(lowerLidOpenPts) / 2]
+p2 = lowerLidClosedPts[len(lowerLidClosedPts) / 2]
+dx = p2[0] - p1[0]
+dy = p2[1] - p1[1]
+d  = dx * dx + dy * dy
+if d > 0: lowerLidRegenThreshold = 0.25 / math.sqrt(d)
+
+
+
 def move():
 	global startX, startY, destX, destY, curX, curY
 	global startXR, startYR, destXR, destYR, curXR, curYR
@@ -242,33 +276,53 @@ while DISPLAY.loop_running():
 		
 		
 		move()
+		p = 0.2
+		# Regenerate iris geometry only if size changed by >= 1/4 pixel
+		if abs(p - prevPupilScale) >= irisRegenThreshold:
+			# Interpolate points between min and max pupil sizes
+			interPupil = pointsInterp(pupilMinPts, pupilMaxPts, p)
+			# Generate mesh between interpolated pupil and iris bounds
+			mesh = pointsMesh(None, interPupil, irisPts, 4, -irisZ, True)
+			# Assign to both eyes
+			leftIris.re_init(pts=mesh)
+			rightIris.re_init(pts=mesh)
+			prevPupilScale = p
 		
+		if (luRegen or (abs(newLeftUpperLidWeight - prevLeftUpperLidWeight) >= upperLidRegenThreshold)):
+			newLeftUpperLidPts = pointsInterp(upperLidOpenPts, upperLidClosedPts, newLeftUpperLidWeight)
+			if newLeftUpperLidWeight > prevLeftUpperLidWeight:
+				leftUpperEyelid.re_init(pts=pointsMesh(upperLidEdgePts, prevLeftUpperLidPts,newLeftUpperLidPts, 5, 0, False))
+			else:
+				leftUpperEyelid.re_init(pts=pointsMesh(upperLidEdgePts, newLeftUpperLidPts,prevLeftUpperLidPts, 5, 0, False))
+			prevLeftUpperLidPts    = newLeftUpperLidPts
+			prevLeftUpperLidWeight = newLeftUpperLidWeight
+			luRegen = True
+		else:
+			luRegen = False
+
+		rightIris.rotateToX(curY)
+		rightIris.rotateToY(curX - convergence)
+		rightIris.draw()	
 		rightEye.rotateToX(curY)
 		rightEye.rotateToY(curX - convergence)
-	        
 		
 		rightEye.draw()
 
 	# Left eye (on screen right)
 
 		leftIris.rotateToX(curY)
-		leftIris.rotateToY(curX + convergence)
+		leftIris.rotateToY(curX - convergence)
 		leftIris.draw()
 		leftEye.rotateToX(curY)
 		leftEye.rotateToY(curX + convergence)
-		leftEye.draw()
+		leftEye.draw()  
 
-		leftUpperEyelid.draw()
-		leftLowerEyelid.draw()
-		rightUpperEyelid.draw()
-		rightLowerEyelid.draw()
-		
 		k = mykeys.read()
 		if k==27:
 			mykeys.close()
 			DISPLAY.stop()
 			#---------------------close process to OLED
-			controller.close_OLED()
+			#controller.close_OLED()
 			#-----------------------------------------
 			exit(0)
 		elif k == 97:
@@ -277,10 +331,9 @@ while DISPLAY.loop_running():
 				curY += 1
 			else: 
 				curX = 30
-				curY = 30
-								
+				curY = 30								
 		elif k == 98:
-		        if curX > -30: 
+			if curX > -30: 
 				curX -= 1 
 				curY -= 1
 			else: 
