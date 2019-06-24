@@ -4,14 +4,14 @@
 # an embarrassing number of globals in the frame() function and stuff.
 # Needed to get SOMETHING working, can focus on improvements next.
 
-import Adafruit_ADS1x15
+#import Adafruit_ADS1x15
 import argparse
 import math
 import pi3d
 import random
-import thread
+#import thread
 import time
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 from svg.path import Path, parse_path
 from xml.dom.minidom import parse
 from gfxutil import *
@@ -25,23 +25,23 @@ PUPIL_IN        = -1    # Analog input for pupil control (-1 = auto)
 JOYSTICK_X_FLIP = False # If True, reverse stick X axis
 JOYSTICK_Y_FLIP = False # If True, reverse stick Y axis
 PUPIL_IN_FLIP   = False # If True, reverse reading from PUPIL_IN
-TRACKING        = True  # If True, eyelid tracks pupil
+TRACKING        = False  # If True, eyelid tracks pupil
 PUPIL_SMOOTH    = 16    # If > 0, filter input from PUPIL_IN
 PUPIL_MIN       = 0.0   # Lower analog range from PUPIL_IN
 PUPIL_MAX       = 1.0   # Upper "
 WINK_L_PIN      = 22    # GPIO pin for LEFT eye wink button
 BLINK_PIN       = 23    # GPIO pin for blink button (BOTH eyes)
 WINK_R_PIN      = 24    # GPIO pin for RIGHT eye wink button
-AUTOBLINK       = False  # If True, eyes blink autonomously
+AUTOBLINK       = True  # If True, eyes blink autonomously
 CRAZY_EYES      = False # If True, each eye moves in different directions
 
 
 # GPIO initialization ------------------------------------------------------
 
-GPIO.setmode(GPIO.BCM)
-if WINK_L_PIN >= 0: GPIO.setup(WINK_L_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-if BLINK_PIN  >= 0: GPIO.setup(BLINK_PIN , GPIO.IN, pull_up_down=GPIO.PUD_UP)
-if WINK_R_PIN >= 0: GPIO.setup(WINK_R_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# GPIO.setmode(GPIO.BCM)
+# if WINK_L_PIN >= 0: GPIO.setup(WINK_L_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# if BLINK_PIN  >= 0: GPIO.setup(BLINK_PIN , GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# if WINK_R_PIN >= 0: GPIO.setup(WINK_R_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 
 # ADC stuff ----------------------------------------------------------------
@@ -78,8 +78,8 @@ if adc:
 
 # Load SVG file, extract paths & convert to point lists --------------------
 
-#dom               = parse("graphics/cyclops-eye.svg")
-dom               = parse("graphics/eye.svg")
+dom               = parse("graphics/cyclops-eye.svg")
+#dom               = parse("graphics/eye.svg")
 vb                = getViewBox(dom)
 pupilMinPts       = getPoints(dom, "pupilMin"      , 32, True , True )
 pupilMaxPts       = getPoints(dom, "pupilMax"      , 32, True , True )
@@ -173,14 +173,14 @@ if maxDist > 0: irisRegenThreshold = 0.25 / maxDist
 # paths is evaluated, then similar 1/4 pixel threshold is determined.
 upperLidRegenThreshold = 0.0
 lowerLidRegenThreshold = 0.0
-p1 = upperLidOpenPts[len(upperLidOpenPts) / 2]
-p2 = upperLidClosedPts[len(upperLidClosedPts) / 2]
+p1 = upperLidOpenPts[len(upperLidOpenPts) // 2]
+p2 = upperLidClosedPts[len(upperLidClosedPts) // 2]
 dx = p2[0] - p1[0]
 dy = p2[1] - p1[1]
 d  = dx * dx + dy * dy
 if d > 0: upperLidRegenThreshold = 0.25 / math.sqrt(d)
-p1 = lowerLidOpenPts[len(lowerLidOpenPts) / 2]
-p2 = lowerLidClosedPts[len(lowerLidClosedPts) / 2]
+p1 = lowerLidOpenPts[len(lowerLidOpenPts) // 2]
+p2 = lowerLidClosedPts[len(lowerLidClosedPts) // 2]
 dx = p2[0] - p1[0]
 dy = p2[1] - p1[1]
 d  = dx * dx + dy * dy
@@ -215,7 +215,9 @@ rightLowerEyelid.set_textures([lidMap])
 rightLowerEyelid.set_shader(shader)
 
 # Generate scleras for each eye...start with a 2D shape for lathing...
+print(scleraFrontPts)
 angle1 = zangle(scleraFrontPts, eyeRadius)[1] # Sclera front angle
+print(angle1)
 angle2 = zangle(scleraBackPts , eyeRadius)[1] # " back angle
 aRange = 180 - angle1 - angle2
 pts    = []
@@ -382,30 +384,6 @@ def frame(p):
 				isMoving     = True
 
 		# repeat for other eye if CRAZY_EYES
-        if CRAZY_EYES:
-            if isMovingR == True:
-                if dtR <= moveDurationR:
-                    scale        = (now - startTimeR) / moveDurationR
-                    # Ease in/out curve: 3*t^2-2*t^3
-                    scale = 3.0 * scale * scale - 2.0 * scale * scale * scale
-                    curXR        = startXR + (destXR - startXR) * scale
-                    curYR        = startYR + (destYR - startYR) * scale
-                else:
-                    startXR      = destXR
-                    startYR      = destYR
-                    curXR        = destXR
-                    curYR        = destYR
-                    holdDurationR = random.uniform(0.1, 1.1)
-                    startTimeR    = now
-                    isMovingR     = False
-            else:
-                if dtR >= holdDurationR:
-                    destXR        = random.uniform(-30.0, 30.0)
-                    n             = math.sqrt(900.0 - destXR * destXR)
-                    destYR        = random.uniform(-n, n)
-                    moveDurationR = random.uniform(0.075, 0.175)
-                    startTimeR    = now
-                    isMovingR     = True
 
 	# Regenerate iris geometry only if size changed by >= 1/4 pixel
 	if abs(p - prevPupilScale) >= irisRegenThreshold:
@@ -437,60 +415,61 @@ def frame(p):
 		# Check if blink time has elapsed...
 		if (now - blinkStartTimeLeft) >= blinkDurationLeft:
 			# Yes...increment blink state, unless...
-			if (blinkStateLeft == 1 and # Enblinking and...
-			    ((BLINK_PIN >= 0 and    # blink pin held, or...
-			      GPIO.input(BLINK_PIN) == GPIO.LOW) or
-			    (WINK_L_PIN >= 0 and    # wink pin held
-			      GPIO.input(WINK_L_PIN) == GPIO.LOW))):
-				# Don't advance yet; eye is held closed
-				pass
+			# if (blinkStateLeft == 1 and # Enblinking and...
+			#     ((BLINK_PIN >= 0 and    # blink pin held, or...
+			#       GPIO.input(BLINK_PIN) == GPIO.LOW) or
+			#     (WINK_L_PIN >= 0 and    # wink pin held
+			#       GPIO.input(WINK_L_PIN) == GPIO.LOW))):
+			# 	# Don't advance yet; eye is held closed
+			# 	pass
+			# else:
+			blinkStateLeft += 1
+			if blinkStateLeft > 2:
+				blinkStateLeft = 0 # NOBLINK
 			else:
-				blinkStateLeft += 1
-				if blinkStateLeft > 2:
-					blinkStateLeft = 0 # NOBLINK
-				else:
-					blinkDurationLeft *= 2.0
-					blinkStartTimeLeft = now
-	else:
-		if WINK_L_PIN >= 0 and GPIO.input(WINK_L_PIN) == GPIO.LOW:
-			blinkStateLeft     = 1 # ENBLINK
-			blinkStartTimeLeft = now
-			blinkDurationLeft  = random.uniform(0.035, 0.06)
+				blinkDurationLeft *= 2.0
+				blinkStartTimeLeft = now
+#	else:
+		# if WINK_L_PIN >= 0 and GPIO.input(WINK_L_PIN) == GPIO.LOW:
+		# 	blinkStateLeft     = 1 # ENBLINK
+		# 	blinkStartTimeLeft = now
+		# 	blinkDurationLeft  = random.uniform(0.035, 0.06)
 
 	if blinkStateRight: # Right eye currently winking/blinking?
 		# Check if blink time has elapsed...
 		if (now - blinkStartTimeRight) >= blinkDurationRight:
 			# Yes...increment blink state, unless...
-			if (blinkStateRight == 1 and # Enblinking and...
-			    ((BLINK_PIN >= 0 and    # blink pin held, or...
-			      GPIO.input(BLINK_PIN) == GPIO.LOW) or
-			    (WINK_R_PIN >= 0 and    # wink pin held
-			      GPIO.input(WINK_R_PIN) == GPIO.LOW))):
-				# Don't advance yet; eye is held closed
-				pass
+			# if (blinkStateRight == 1 and # Enblinking and...
+			#     ((BLINK_PIN >= 0 and    # blink pin held, or...
+			#       GPIO.input(BLINK_PIN) == GPIO.LOW) or
+			#     (WINK_R_PIN >= 0 and    # wink pin held
+			#       GPIO.input(WINK_R_PIN) == GPIO.LOW))):
+			# 	# Don't advance yet; eye is held closed
+			# 	pass
+			# else:
+			# 	
+			blinkStateRight += 1
+			if blinkStateRight > 2:
+				blinkStateRight = 0 # NOBLINK
 			else:
-				blinkStateRight += 1
-				if blinkStateRight > 2:
-					blinkStateRight = 0 # NOBLINK
-				else:
-					blinkDurationRight *= 2.0
-					blinkStartTimeRight = now
-	else:
-		if WINK_R_PIN >= 0 and GPIO.input(WINK_R_PIN) == GPIO.LOW:
-			blinkStateRight     = 1 # ENBLINK
-			blinkStartTimeRight = now
-			blinkDurationRight  = random.uniform(0.035, 0.06)
+				blinkDurationRight *= 2.0
+				blinkStartTimeRight = now
+	#else:
+		# if WINK_R_PIN >= 0 and GPIO.input(WINK_R_PIN) == GPIO.LOW:
+		# 	blinkStateRight     = 1 # ENBLINK
+		# 	blinkStartTimeRight = now
+		# 	blinkDurationRight  = random.uniform(0.035, 0.06)
 
-	if BLINK_PIN >= 0 and GPIO.input(BLINK_PIN) == GPIO.LOW:
-		duration = random.uniform(0.035, 0.06)
-		if blinkStateLeft == 0:
-			blinkStateLeft     = 1
-			blinkStartTimeLeft = now
-			blinkDurationLeft  = duration
-		if blinkStateRight == 0:
-			blinkStateRight     = 1
-			blinkStartTimeRight = now
-			blinkDurationRight  = duration
+	# if BLINK_PIN >= 0 and GPIO.input(BLINK_PIN) == GPIO.LOW:
+	# 	duration = random.uniform(0.035, 0.06)
+	# 	if blinkStateLeft == 0:
+	# 		blinkStateLeft     = 1
+	# 		blinkStartTimeLeft = now
+	# 		blinkDurationLeft  = duration
+	# 	if blinkStateRight == 0:
+	# 		blinkStateRight     = 1
+	# 		blinkStartTimeRight = now
+	# 		blinkDurationRight  = duration
 
 	if TRACKING:
 		n = 0.4 - curY / 60.0
@@ -511,6 +490,8 @@ def frame(p):
 		n = 0.0
 	newLeftUpperLidWeight = trackingPos + (n * (1.0 - trackingPos))
 	newLeftLowerLidWeight = (1.0 - trackingPos) + (n * trackingPos)
+	
+
 
 	if blinkStateRight:
 		n = (now - blinkStartTimeRight) / blinkDurationRight
@@ -518,6 +499,7 @@ def frame(p):
 		if blinkStateRight == 2: n = 1.0 - n
 	else:
 		n = 0.0
+
 	if CRAZY_EYES:
 		newRightUpperLidWeight = trackingPosR + (n * (1.0 - trackingPosR))
 		newRightLowerLidWeight = (1.0 - trackingPosR) + (n * trackingPosR)
@@ -623,7 +605,7 @@ def frame(p):
 	leftEye.rotateToY(curX + convergence)
 	leftEye.draw()
 
-	#leftUpperEyelid.draw()
+	leftUpperEyelid.draw()
 	leftLowerEyelid.draw()
 	rightUpperEyelid.draw()
 	rightLowerEyelid.draw()
