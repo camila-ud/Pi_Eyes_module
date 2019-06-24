@@ -121,23 +121,22 @@ class Eye:
       self.lowerEyelid = meshInit(33, 5, False, 0, 0.5/lidMap.iy, True)
       self.lowerEyelid.set_textures([lidMap])
       self.lowerEyelid.set_shader(shader)
-
-      print(id)
-       #right 0.5
+       #LEFT 0
       if id == 0:
           self.eye.positionX(eyePosition)
           self.iris.positionX(eyePosition)
           self.upperEyelid.positionX(eyePosition)
+          self.lowerEyelid.positionX(eyePosition)
           reAxis(self.eye, 0)
       else:
          self.eye.positionX(-eyePosition)
          self.iris.positionX(-eyePosition)
          self.upperEyelid.positionX(-eyePosition)
+         self.lowerEyelid.positionX(-eyePosition)
          reAxis(self.eye, 0.5)
 
       #initial position
-      self.upperEyelid.positionZ(-eyeRadius - 42)
-      self.lowerEyelid.positionX(-eyePosition)
+      self.upperEyelid.positionZ(-eyeRadius - 42)      
       self.lowerEyelid.positionZ(-eyeRadius - 42)
 
       self.irisRegenThreshold = self.get_iris_change()
@@ -158,7 +157,8 @@ class Eye:
       self.regenerate_iris(0.5)
       self.regenerate_upper_lid(0.4,True)
       self.regenerate_lower_lid(0.2)
-      self.n  = math.sqrt(900.0 - 15 * 15)
+      self.n            = math.sqrt(900.0 - 15 * 15)
+     
    
    def draw(self):
       self.eye.draw()
@@ -234,8 +234,11 @@ class Eye:
          if dt >= duration: break 
          self.frame(isMoving,startTime)
 
-   def frame(self):   
-      now = time.time()  
+   def frame(self,now):  
+      self.blink(now)
+      
+   
+   def blink(self,now):
       #check final
       if (now - self.timeOfLastBlink) >= self.timeToNextBlink:
          self.timeOfLastBlink = now
@@ -244,7 +247,7 @@ class Eye:
             self.blinkState = 1
             self.blinkStartTime = now
             self.blinkDuration = duration
-         self.timeToNextBlink = duration * 4 
+         self.timeToNextBlink = duration * 5 
       
       if self.blinkState:
          if (now - self.blinkStartTime) >= self.blinkDuration:
@@ -273,6 +276,16 @@ class Eye:
          self.luRegen = True
       else:
          self.luRegen = False
+   
+   
+      
+   def rotate(self,curX,curY):
+      self.iris.rotateToX(curY)
+      self.iris.rotateToY(curX + 2)
+      self.eye.rotateToX(curY) 
+      self.eye.rotateToY(curX + 2)
+      
+
 
       
 class eyes:
@@ -282,6 +295,18 @@ class eyes:
       
       self.right = Eye(eyePosition,eyeRadius,0.5)
       self.left = Eye(eyePosition,eyeRadius,0)
+
+       #Variables to describe movement
+      self.startTime = 0.0
+      self. startX       = random.uniform(-20.0, 20.0)      
+      self.startY       = random.uniform(-20, 10)
+      self.destX        = self.startX
+      self.destY        = self.startY
+      self.curX         = self.startX
+      self.curY         = self.startY
+      self.moveDuration = random.uniform(0.09, 0.2)
+      self.holdDuration = random.uniform(0.5, 1.5)
+      self.isMoving     = False
       
    def draw(self):
       self.right.draw()
@@ -291,10 +316,39 @@ class eyes:
       self.right.regenerate_map(color,p)
       self.left.regenerate_map(color,p)
    
-   def blink(self):
-      self.left.frame()
-      self.right.frame()
+   def blink(self):         
+      now = time.time()
+      self.left.frame(now)
+      self.right.frame(now)
+      self.move(now)
+      self.left.rotate(self.curX,self.curY)
+      self.right.rotate(self.curX,self.curY)
 
+   def move(self,now):
+      dt  = now - self.startTime
+      # Autonomous eye position
+      if self.isMoving == True:
+         if dt <= self.moveDuration:
+            scale        = (now - self.startTime) / self.moveDuration
+            scale = scale * scale
+            self.curX         = self.startX + (self.destX - self.startX) * scale
+            self.curY         = self.startY + (self.destY - self.startY) * scale
+         else:
+            self.startX       = self.destX
+            self.startY       = self.destY
+            self.curX         = self.destX
+            self.curY         = self.destY
+            self.holdDuration = random.uniform(0.5, 1.5)
+            self.startTime    = now
+            self.isMoving     = False
+      else:
+         if dt >= self.holdDuration:
+            self.destX        = random.uniform(-20.0, 20.0)
+            self.n            = math.sqrt(900.0 - self.destX * self.destX)
+            self.destY        = random.uniform(-20,10)
+            self.moveDuration = random.uniform(0.09, 0.2)
+            self.startTime    = now
+            self.isMoving     = True
 
 mykeys = pi3d.Keyboard() # For capturing key presse 
 x = eyes()
@@ -309,7 +363,7 @@ while DISPLAY.loop_running():
       #-----------------------------------------
       exit(0)
    elif k == 97:
-        x.color((1,0,0),0.5)
+        x.color((1,0,0),1)
    elif k == 98:
         x.color((0,1,0),0.3)
    elif k == 99:
