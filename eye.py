@@ -97,7 +97,7 @@ class Eye:
       self.eyePosition = eyePosition
       self.eyeRadius = eyeRadius
       #Load texture maps --------------------------------------------------------
-      irisMap   = pi3d.Texture("./graphics/iris_blue.jpg"  , mipmap=False,
+      irisMap   = pi3d.Texture("./graphics/iris.jpg"  , mipmap=False,
                   filter=pi3d.GL_LINEAR)
       scleraMap = pi3d.Texture("./graphics/sclera.png", mipmap=False,
                   filter=pi3d.GL_LINEAR, blend=True)
@@ -285,17 +285,23 @@ class Eye:
       self.eye.rotateToX(curY) 
       self.eye.rotateToY(curX + 2)
       
+   def close(self):
+      DISPLAY.stop()
+      #---------------------close process to OLED
+      #controller.close_OLED()
+      #-----------------------------------------
+      exit(0)
+
 
 
       
-class eyes:
+class Eyes:
 
 
    def __init__(self):
       
       self.right = Eye(eyePosition,eyeRadius,0.5)
-      self.left = Eye(eyePosition,eyeRadius,0)
-
+      self.left = Eye(eyePosition,eyeRadius,0)  
        #Variables to describe movement
       self.startTime = 0.0
       self. startX       = random.uniform(-20.0, 20.0)      
@@ -316,13 +322,15 @@ class eyes:
       self.right.regenerate_map(color,p)
       self.left.regenerate_map(color,p)
    
-   def blink(self):         
+   def blink(self):            
+      DISPLAY.loop_running()       
       now = time.time()
       self.left.frame(now)
       self.right.frame(now)
       self.move(now)
       self.left.rotate(self.curX,self.curY)
       self.right.rotate(self.curX,self.curY)
+      self.draw()
 
    def move(self,now):
       dt  = now - self.startTime
@@ -350,25 +358,23 @@ class eyes:
             self.startTime    = now
             self.isMoving     = True
 
+   def close(self):
+      self.left.close()
 mykeys = pi3d.Keyboard() # For capturing key presse 
-x = eyes()
-while DISPLAY.loop_running():
-   x.draw()
+x = Eyes()
+while True:
+   x.blink()
    k = mykeys.read()
    if k==27:
       mykeys.close()
-      DISPLAY.stop()
-      #---------------------close process to OLED
-      #controller.close_OLED()
-      #-----------------------------------------
-      exit(0)
+      x.close()
    elif k == 97:
         x.color((1,0,0),1)
    elif k == 98:
         x.color((0,1,0),0.3)
    elif k == 99:
         x.color((0.5,0.5,0.5),0.5)
-   x.blink()
+   
    
 
 
