@@ -54,7 +54,7 @@ layers = [("pupilMin"      ,32, True , True),
          ("lowerLidOpen"   ,33, False, False),
          ("lowerLidEdge"   ,33, False, False)]
 
-dom               = parse("graphics/test.svg")
+dom               = parse("graphics/cyclops-eye.svg")
 vb                = getViewBox(dom)
 points = []
 for l in layers:
@@ -76,14 +76,25 @@ to = {  "pupilMinPts": 0,
          "lowerLidClosedPts":8,
          "lowerLidOpenPts":9,
          "lowerLidEdgePts":10 }
-"""
-Class representing an Eye
-"""
-class Eye:    
+
+class Eye:  
+
+   def generate_sclera(self, eyeRadius):
+      global points,to
+      # Generate scleras for each eye...start with a 2D shape for lathing...
+      angle1 = zangle(points[to["scleraFrontPts"]], eyeRadius)[1] # Sclera front angle
+      angle2 = zangle(points[to["scleraBackPts"]], eyeRadius)[1] # " back angle      aRange = 180 - angle1 - angle2
+      pts    = []
+      for i in range(24):
+         ca, sa = pi3d.Utility.from_polar((90 - angle1) - aRange * i / 23)
+         pts.append((ca * eyeRadius, sa * eyeRadius))
+      return pts
 
 
    def __init__(self,eyePosition,eyeRadius,id):
       global points,to
+      self.oled = Controller()
+      self.oled.open_OLED()
       self.eyePosition = eyePosition
       self.eyeRadius = eyeRadius
       #Load texture maps --------------------------------------------------------
@@ -100,7 +111,8 @@ class Eye:
       #init sclera
       self.eye = pi3d.Lathe(path=self.generate_sclera(eyeRadius), sides=64)
       self.eye.set_textures([scleraMap])
-      self.eye.set_shader(shader)     
+      self.eye.set_shader(shader)
+     
       self.irisZ = zangle(points[to["irisPts"]], eyeRadius)[0] * 0.99 # Get iris Z depth, for later
       #init upperlid
       self.upperEyelid = meshInit(33, 5, False, 0, 0.5/lidMap.iy, True)
@@ -112,14 +124,12 @@ class Eye:
       self.lowerEyelid.set_shader(shader)
        #LEFT 0
       if id == 0:
-            #init config if id (left id) is indicated
           self.eye.positionX(eyePosition)
           self.iris.positionX(eyePosition)
           self.upperEyelid.positionX(eyePosition)
           self.lowerEyelid.positionX(eyePosition)
           reAxis(self.eye, 0)
       else:
-            #init right eye
          self.eye.positionX(-eyePosition)
          self.iris.positionX(-eyePosition)
          self.upperEyelid.positionX(-eyePosition)
@@ -129,6 +139,7 @@ class Eye:
       #initial position
       self.upperEyelid.positionZ(-eyeRadius - 42)      
       self.lowerEyelid.positionZ(-eyeRadius - 42)
+
       self.irisRegenThreshold = self.get_iris_change()
       self.prevPupilScale = 0.5
       
@@ -147,21 +158,15 @@ class Eye:
       self.regenerate_iris(0.5)
       self.regenerate_upper_lid(0.4,True)
       self.regenerate_lower_lid(0.2)
-      self.n = math.sqrt(900.0 - 15 * 15)
-
-   #Define points of sclera 
-   def generate_sclera(self, eyeRadius):
-      global points,to
-      # Generate scleras for each eye...start with a 2D shape for lathing...
-      angle1 = zangle(points[to["scleraFrontPts"]], eyeRadius)[1] # Sclera front angle
-      angle2 = zangle(points[to["scleraBackPts"]], eyeRadius)[1] # " back angle
-      aRange = 180 - angle1 - angle2
-      pts    = []
-      for i in range(24):
-         ca, sa = pi3d.Utility.from_polar((90 - angle1) - aRange * i / 23)
-         pts.append((ca * eyeRadius, sa * eyeRadius))
-      return pts
+      self.n            = math.sqrt(900.0 - 15 * 15)
+     
    
+   def draw(self):
+      self.eye.draw()
+      self.iris.draw()
+      self.upperEyelid.draw()
+      #self.lowerEyelid.draw()
+
    def get_iris_change(self):
       irisRegenThreshold = 0.0
       a = pointsBounds(points[to["pupilMinPts"]]) # Bounds of pupil at min size (in pixels)
@@ -217,29 +222,28 @@ class Eye:
       #return previous
       self.lowerEyelid.re_init(pts=mesh)
       return p
-
-
-   #______methods to visualize
    
-   def draw(self):
-      self.eye.draw()
-      self.iris.draw()
-      self.upperEyelid.draw()
-      #self.lowerEyelid.draw()
-
-   #Change iris's color
    def regenerate_map(self,color,p):     
       self.iris.set_material(color)
       self.regenerate_iris(p)
    
+   def animation(self,duration):
+      startTime = time.time()
+      isMoving = True
+      while True:
+         dt = time.time() - startTime
+         if dt >= duration: break 
+         self.frame(isMoving,startTime)
+
    def frame(self,now):  
-      self.blink(now)      
+      self.blink(now)
+      
    
    def blink(self,now):
       #check final
       if (now - self.timeOfLastBlink) >= self.timeToNextBlink:
          self.timeOfLastBlink = now
-         duration        = 0.7  # Init duration
+         duration        = 0.7
          if self.blinkState != 1:
             self.blinkState = 1
             self.blinkStartTime = now
@@ -263,7 +267,6 @@ class Eye:
      
       newLid =  self.trackingPos + (self.n * (1.0 - self.trackingPos))     
       if (self.luRegen or (abs(newLid - self.prevLid) >= self.limit)):
-            #is there any change?
          if newLid > self.prevLid:
             #change prevpts
             self.regenerate_upper_lid(newLid,True)
@@ -276,23 +279,28 @@ class Eye:
          self.luRegen = False
    
    
-   #Make a movement
+      
    def rotate(self,curX,curY):
       self.iris.rotateToX(curY)
       self.iris.rotateToY(curX + 2)
       self.eye.rotateToX(curY) 
       self.eye.rotateToY(curX + 2)
       
-"""
-Class representing EYES ANIMEES
+   def close(self):
+      DISPLAY.stop()
+      #---------------------close process to OLED
+      self.oled.close_OLED()
+      #-----------------------------------------
+      exit(0)
 
-"""
+
+
+      
 class Eyes:
 
 
    def __init__(self):
-      self.oled = Controller()  #ACTIVE CODE C to controller OLED
-      self.oled.open_OLED()     #Active method
+      
       self.right = Eye(eyePosition,eyeRadius,0.5)
       self.left = Eye(eyePosition,eyeRadius,0)  
        #Variables to describe movement
@@ -318,10 +326,10 @@ class Eyes:
    def blink(self):            
       DISPLAY.loop_running()       
       now = time.time()
-      self.left.frame(now)    #calcul new frame 
-      self.right.frame(now)   #calcul new frame
-      self.move(now)          #calcul new coordinates 
-      self.left.rotate(self.curX,self.curY)     #Update X,Y
+      self.left.frame(now)
+      self.right.frame(now)
+      self.move(now)
+      self.left.rotate(self.curX,self.curY)
       self.right.rotate(self.curX,self.curY)
       self.draw()
 
@@ -352,30 +360,21 @@ class Eyes:
             self.isMoving     = True
 
    def close(self):
-      DISPLAY.stop()
-            #---------------------close process to OLED
-      self.oled.close_OLED()
-            #-----------------------------------------
-      exit(0)
-      
-      
-      
-#--------------------------- TESTING CODE
-      
-mykeys = pi3d.Keyboard() # For capturing key presse 
+      self.left.close()
+#mykeys = pi3d.Keyboard() # For capturing key presse 
 x = Eyes()
 while True:
    x.blink()
-   k = mykeys.read()
-   if k==27:     
-      x.close()
-      mykeys.close()
-   elif k == 97:
-        x.color((1,0,0),1)
-   elif k == 98:
-        x.color((0,1,0),0.3)
-   elif k == 99:
-        x.color((0.5,0.5,0.5),0.5)
+   ##k = mykeys.read()
+   #if k==27:     
+      #x.close()
+      #mykeys.close()
+   #elif k == 97:
+        #x.color((1,0,0),1)
+   #elif k == 98:
+        #x.color((0,1,0),0.3)
+   #elif k == 99:
+        #x.color((0.5,0.5,0.5),0.5)
    
    
 

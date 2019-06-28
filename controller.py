@@ -4,12 +4,15 @@
 # Framebuffer-copy-to-two-SPI-screens
 # P20 C.Arias
 
-from getpass import getpass
 import subprocess
 import os
-
-def open_OLED():
-	global process
+class Controller:
+	def __init__(self):
+		self.process = 0
+		print("D")
+		
+	def open_OLED(self):
+	
 	#if we want get password
 	#-----------------------------------
 	#try:
@@ -21,13 +24,14 @@ def open_OLED():
 		#process = Popen("sudo -S ./fbx2".split(),stdin=PIPE,stderr=PIPE)
 		#process.communicate(password.encode())
 	#----------------------------------------		
-	process = subprocess.Popen(["sudo","./fbx2"])		
-	pass
+		self.process = subprocess.Popen(["sudo","./fbx2"])
+		return 		
+	
 		
-def close_OLED():
-	global process
-	os.system("sudo killall fbx2")
-	print("OLED est fermé")
+	def close_OLED(self):
+		os.system("sudo killall fbx2")
+		print("OLED est fermé")
+		return 
 	
 	
 	
