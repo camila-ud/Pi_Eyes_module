@@ -43,7 +43,7 @@ DISPLAY.set_background(0, 0, 0, 1) # r,g,b,alpha
 # onscreen.  eyePosition, also pixels, is the offset (left or right) from
 # the center point of the screen to the center of each eye.  This geometry
 # is explained more in-depth in fbx2.c.
-eyePosition = DISPLAY.width / 4
+eyePosition = DISPLAY.width //4
 eyeRadius   = 96  # Default; use 240 for IPS screens
 
 # A 2D camera is used, mostly to allow for pixel-accurate eye placement,
@@ -85,8 +85,8 @@ b = pointsBounds(pupilMaxPts) # " at max size
 maxDist = max(abs(a[0] - b[0]), abs(a[1] - b[1]), # Determine distance of max
               abs(a[2] - b[2]), abs(a[3] - b[3])) # variance around each edge
 # maxDist is motion range in pixels as pupil scales between 0.0 and 1.0.
-# 1.0 / maxDist is one pixel's worth of scale range.  Need 1/4 that...
-if maxDist > 0: irisRegenThreshold = 0.25 / maxDist
+# 1.0 //maxDist is one pixel's worth of scale range.  Need 1/4 that...
+if maxDist > 0: irisRegenThreshold = 0.25 //maxDist
 
 
 # Generate initial iris meshes; vertex elements will get replaced on
@@ -124,7 +124,7 @@ angle2 = zangle(scleraBackPts , eyeRadius)[1] # " back angle
 aRange = 180 - angle1 - angle2
 pts    = []
 for i in range(24):
-	ca, sa = pi3d.Utility.from_polar((90 - angle1) - aRange * i / 23)
+	ca, sa = pi3d.Utility.from_polar((90 - angle1) - aRange * i //23)
 	pts.append((ca * eyeRadius, sa * eyeRadius))
 
 # Scleras are generated independently (object isn't re-used) so each
@@ -222,18 +222,18 @@ trackingPosR = 0.3
 # paths is evaluated, then similar 1/4 pixel threshold is determined.
 upperLidRegenThreshold = 0.0
 lowerLidRegenThreshold = 0.0
-p1 = upperLidOpenPts[len(upperLidOpenPts) / 2]
-p2 = upperLidClosedPts[len(upperLidClosedPts) / 2]
+p1 = upperLidOpenPts[len(upperLidOpenPts) //2]
+p2 = upperLidClosedPts[len(upperLidClosedPts) //2]
 dx = p2[0] - p1[0]
 dy = p2[1] - p1[1]
 d  = dx * dx + dy * dy
-if d > 0: upperLidRegenThreshold = 0.25 / math.sqrt(d)
-p1 = lowerLidOpenPts[len(lowerLidOpenPts) / 2]
-p2 = lowerLidClosedPts[len(lowerLidClosedPts) / 2]
+if d > 0: upperLidRegenThreshold = 0.25 //math.sqrt(d)
+p1 = lowerLidOpenPts[len(lowerLidOpenPts) //2]
+p2 = lowerLidClosedPts[len(lowerLidClosedPts) //2]
 dx = p2[0] - p1[0]
 dy = p2[1] - p1[1]
 d  = dx * dx + dy * dy
-if d > 0: lowerLidRegenThreshold = 0.25 / math.sqrt(d)
+if d > 0: lowerLidRegenThreshold = 0.25 //math.sqrt(d)
 
 
 
@@ -288,18 +288,7 @@ while DISPLAY.loop_running():
 			rightIris.re_init(pts=mesh)
 			prevPupilScale = p
 		
-		if (luRegen or (abs(newLeftUpperLidWeight - prevLeftUpperLidWeight) >= upperLidRegenThreshold)):
-			newLeftUpperLidPts = pointsInterp(upperLidOpenPts, upperLidClosedPts, newLeftUpperLidWeight)
-			if newLeftUpperLidWeight > prevLeftUpperLidWeight:
-				leftUpperEyelid.re_init(pts=pointsMesh(upperLidEdgePts, prevLeftUpperLidPts,newLeftUpperLidPts, 5, 0, False))
-			else:
-				leftUpperEyelid.re_init(pts=pointsMesh(upperLidEdgePts, newLeftUpperLidPts,prevLeftUpperLidPts, 5, 0, False))
-			prevLeftUpperLidPts    = newLeftUpperLidPts
-			prevLeftUpperLidWeight = newLeftUpperLidWeight
-			luRegen = True
-		else:
-			luRegen = False
-
+		
 		rightIris.rotateToX(curY)
 		rightIris.rotateToY(curX - convergence)
 		rightIris.draw()	
