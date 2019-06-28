@@ -2,7 +2,6 @@
 
 ### By :  Camila ARIAS
 ### *P20 : Tête interactive Kompaï*
-**Contact** : @camila-ud 
 
 ## Module des yeux animées pour Raspberry Pi 3
 
@@ -16,10 +15,12 @@ Le controller pour les écran OLED est [eye.py](../master/eye.py), la classe pri
 
 `python eye.py`
 
-La connexion physique se trouve dans ![hard](/hard.png) 
+On peut changer la forme des yeux, pour le projet on utilise *test.svg*
+La connexion physique se trouve comme ça : ![hard](/hard.png) 
 
 **Ordinateur**
 
 Si on veut travailler seulement dans l'animation on peut executer
 `python main_eyes.py`
+
 
