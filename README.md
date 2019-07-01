@@ -15,8 +15,6 @@ Le controller pour les écran OLED est [eye.py](../master/eye.py), la classe pri
 
 `python eye.py`
 
-On peut changer la forme des yeux, pour le projet on utilise *test.svg*
-La connexion physique se trouve comme ça : ![hard](/hard.png) 
 
 **Ordinateur**
 
